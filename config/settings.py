@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "riesgos",
     "ecobici",
     "aire",
+    "siniestros",
 ]
 
 MIDDLEWARE = [
