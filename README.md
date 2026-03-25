@@ -35,7 +35,7 @@ Filters: `?cve_dleg=16` · Search: `?search=tepito` · Sort: `?ordering=nombre`
 | `GET /api/v1/transporte/ste/` | Tren Ligero, Cablebus, Trolebús (2022–) | ~62 K |
 | `GET /api/v1/transporte/rtp/` | Red de Transporte de Pasajeros (2022–) | ~37 K |
 
-Common filters: `?linea=Linea+1` · `?anio=2023` · `?source=simple|desglosada` · `?sistema=cablebus|trolebus|tren_ligero`
+Common filters: `?linea=Linea+1` · `?anio=2023` · `?mes=Marzo` · `?source=simple|desglosada` · `?sistema=cablebus|trolebus|tren_ligero`
 
 ---
 
@@ -46,7 +46,7 @@ Common filters: `?linea=Linea+1` · `?anio=2023` · `?source=simple|desglosada` 
 | `GET /api/v1/seguridad/carpetas/` | Investigation files (2016–2019) |
 | `GET /api/v1/seguridad/carpetas/{id}/` | Detail |
 
-Filters: `?alcaldia_hechos=CUAUHTÉMOC` · `?categoria_delito=DELITO+DE+ALTO+IMPACTO` · `?ao_hechos=2018`
+Filters: `?alcaldia_hechos=CUAUHTÉMOC` · `?categoria_delito=DELITO+DE+ALTO+IMPACTO` · `?ao_hechos=2018` · `?mes_hechos=JUNIO`
 Search: `?search=robo`
 
 **Source:** ~808,871 records · resource_id `3f308147-b1fc-49a9-92b7-e74f3f79aa9c`
@@ -60,8 +60,19 @@ Search: `?search=robo`
 | `GET /api/v1/riesgos/inundaciones/` | Flood risk by AGEB |
 | `GET /api/v1/riesgos/refugios/` | Temporary shelters |
 
-Flood filters: `?alcaldia=Xochimilco` · `?intensidad=Alto|Medio|Bajo` · `?r_p_v_e=Peligro`
-Shelter filters: `?delegacion=Cuauhtémoc` · Search: `?search=deportivo`
+Flood filters: `?alcaldia=Xochimilco` · `?intensidad=Alto|Medio|Bajo` · `?r_p_v_e=Peligro` · `?fenomeno=Inundacion`
+Shelter filters: `?delegacion=Cuauhtémoc` · `?region=I` · Search: `?search=deportivo`
+
+---
+
+### System endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health/` | Health check — DB + Redis status (`200` / `503`) |
+| `GET /api/docs/` | Swagger UI (interactive API explorer) |
+| `GET /api/schema/` | OpenAPI schema (JSON/YAML) |
+| `GET /admin/` | Django admin |
 
 ---
 
@@ -70,105 +81,114 @@ Shelter filters: `?delegacion=Cuauhtémoc` · Search: `?search=deportivo`
 ```
 data-cdmx-backend-django/
 ├── config/
-│   ├── settings.py          # Main configuration (PostgreSQL, DRF, Celery, Redis)
-│   ├── settings_test.py     # SQLite override for tests
+│   ├── settings.py          # Main config (PostgreSQL, DRF, Celery, Redis, Sentry, logging)
+│   ├── settings_test.py     # SQLite + LocMemCache override for tests
 │   ├── celery.py            # Celery app initialization
+│   ├── views.py             # Health check view
 │   └── urls.py              # Root URL dispatcher
-├── colonias/
-│   ├── models.py            # Colonia
-│   ├── serializers.py
-│   ├── views.py             # ColoniaViewSet
-│   ├── urls.py
-│   ├── admin.py
-│   └── tests.py             # 10 tests
-├── transporte/
-│   ├── models.py            # AfluenciaMetro, AfluenciaMetrobus, AfluenciaSTE, AfluenciaRTP
-│   ├── serializers.py
-│   ├── views.py             # 4 ViewSets
-│   ├── tasks.py             # Celery tasks: ridership summaries
-│   ├── urls.py
-│   ├── admin.py
-│   └── tests.py             # 12 tests
-├── seguridad/
-│   ├── models.py            # CarpetaInvestigacion
-│   ├── serializers.py
-│   ├── views.py             # CarpetaInvestigacionViewSet
-│   ├── tasks.py             # Celery tasks: crime statistics
-│   ├── urls.py
-│   ├── admin.py
-│   └── tests.py             # 8 tests
-├── riesgos/
-│   ├── models.py            # RiesgoInundacion, Refugio
-│   ├── serializers.py
-│   ├── views.py             # 2 ViewSets
-│   ├── urls.py
-│   ├── admin.py
-│   └── tests.py             # 11 tests
+├── colonias/                # Colonia model + ViewSet + tests
+├── transporte/              # AfluenciaMetro/bus/STE/RTP models + ViewSets + Celery tasks + tests
+├── seguridad/               # CarpetaInvestigacion model + ViewSet + Celery tasks + tests
+├── riesgos/                 # RiesgoInundacion + Refugio models + ViewSets + tests
+├── Dockerfile               # Multi-stage build (builder + runtime, non-root user)
+├── Makefile                 # Common commands
+├── pyproject.toml           # Ruff, black, pytest, coverage config
+├── .pre-commit-config.yaml
 ├── .env.example
 └── requirements.txt
 ```
 
 ## Quick start
 
-### 1. PostgreSQL
-
 ```bash
-docker run -d --name cdmx-postgres \
-  -e POSTGRES_DB=cdmx \
-  -e POSTGRES_USER=cdmx \
-  -e POSTGRES_PASSWORD=cdmx \
-  -p 5432:5432 postgres:16-alpine
-```
+cp .env.example .env
 
-### 2. Django backend
+make db      # start PostgreSQL 16 container
+make redis   # start Redis 7 container
 
-```bash
 pip install -r requirements.txt
-cp .env.example .env          # adjust credentials if needed
-
-python3 manage.py migrate
-python3 manage.py createsuperuser   # to access the admin
-python3 manage.py runserver
+make migrate
+make run
 ```
 
-API available at `http://localhost:8000/api/v1/`
-Admin at `http://localhost:8000/admin/`
+| URL | What |
+|-----|------|
+| `http://localhost:8000/api/v1/` | API root |
+| `http://localhost:8000/api/docs/` | Swagger UI |
+| `http://localhost:8000/health/` | Health check |
+| `http://localhost:8000/admin/` | Admin |
 
-### 3. Load data
-
-Run the pipeline from the [`cdmx-api-pipeline`](../cdmx-api-pipeline) repo. The DAGs write directly into the same PostgreSQL database.
+To load data, run the pipeline from [`cdmx-api-pipeline`](../cdmx-api-pipeline). The DAGs write directly into the same PostgreSQL database.
 
 ## Testing
 
-Tests use SQLite in memory — PostgreSQL is not required.
+Tests use SQLite in memory — no PostgreSQL or Redis required.
 
 ```bash
-python3 manage.py test colonias transporte seguridad riesgos \
-  --settings=config.settings_test -v 2
+make test
 ```
 
 ```
-colonias    10 tests  — model (str, unique, nullable), API (list, retrieve, filter, search, read-only, fields)
-transporte  12 tests  — AfluenciaMetro (unique_together, source), AfluenciaSTE (sistema_display), API filters
-seguridad    8 tests  — CarpetaInvestigacion (str, unique, coords), API (list, filter, search, read-only)
-riesgos     11 tests  — RiesgoInundacion + Refugio (str, unique), API (list, filters, search)
+colonias    10 tests  — model (str, unique, nullable), API (list, retrieve, filter, search, read-only)
+transporte  12 tests  — AfluenciaMetro (unique_together, source), AfluenciaSTE, API filters
+seguridad    8 tests  — CarpetaInvestigacion (str, unique, coords), API (list, filter, search)
+riesgos     11 tests  — RiesgoInundacion + Refugio, API (list, filters, search)
 ──────────────────────
 Total       41 tests
 ```
+
+## Docker
+
+```bash
+docker build -t cdmx-backend .
+docker run --env-file .env -p 8000:8000 cdmx-backend
+```
+
+The image uses a two-stage build — only the virtualenv and source are copied to the runtime stage. The app runs as a non-root user.
+
+## Observability
+
+### Health check
+
+`GET /health/` returns `200` when both DB and Redis are reachable, `503` otherwise:
+
+```json
+{"status": "ok", "db": "ok", "redis": "ok"}
+```
+
+### Sentry
+
+Set `SENTRY_DSN` in `.env` to enable error tracking for Django requests and Celery tasks.
+`send_default_pii=False` by default. Set `DJANGO_ENV=production` to tag events correctly.
+
+### Logging
+
+| Environment | Format |
+|-------------|--------|
+| `DJANGO_DEBUG=true` (default) | Plain text |
+| `DJANGO_DEBUG=false` | JSON — ready for CloudWatch Logs / Datadog |
+
+## Rate limiting
+
+Anonymous clients are limited to **200 requests/hour** (`AnonRateThrottle`).
+Returns `HTTP 429` with a `Retry-After` header when exceeded.
+Adjust `DEFAULT_THROTTLE_RATES` in `settings.py` to fit actual traffic.
 
 ## Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DJANGO_SECRET_KEY` | insecure-key | Secret key (change in production) |
-| `DJANGO_DEBUG` | `true` | Debug mode |
-| `DJANGO_ALLOWED_HOSTS` | `localhost 127.0.0.1` | Allowed hosts |
+| `DJANGO_SECRET_KEY` | insecure-key | Secret key — always change in production |
+| `DJANGO_DEBUG` | `true` | Debug mode — set `false` in production |
+| `DJANGO_ALLOWED_HOSTS` | `localhost 127.0.0.1` | Space-separated allowed hosts |
 | `DB_NAME` | `cdmx` | Database name |
 | `DB_USER` | `cdmx` | PostgreSQL user |
 | `DB_PASSWORD` | `cdmx` | Password |
 | `DB_HOST` | `localhost` | PostgreSQL host |
 | `DB_PORT` | `5432` | Port |
-| `REDIS_URL` | `redis://127.0.0.1:6379/0` | Redis URL for Django cache and Celery broker |
+| `REDIS_URL` | `redis://127.0.0.1:6379/0` | Redis URL for cache and Celery broker |
+| `SENTRY_DSN` | — | Sentry DSN (leave empty to disable) |
+| `DJANGO_ENV` | `production` | Environment tag for Sentry |
 
 ## Models — quick reference
 
