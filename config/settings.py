@@ -24,6 +24,9 @@ INSTALLED_APPS = [
     "rest_framework",
     # Propios
     "colonias",
+    "transporte",
+    "seguridad",
+    "riesgos",
 ]
 
 MIDDLEWARE = [
