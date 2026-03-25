@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from .models import CarpetaInvestigacion
 from .tasks import _calcular_estadisticas_delitos, _calcular_mapa_calor
 
-HOY = datetime.date(2018, 6, 15)
+HOY = datetime.date(2022, 6, 15)  # post-2019 date range
 
 
 def _carpeta(ckan_id=1, delito="ROBO", alcaldia="CUAUHTÉMOC", categoria="DELITO DE ALTO IMPACTO", **kw):
@@ -33,6 +33,17 @@ class CarpetaModelTest(TestCase):
         c = CarpetaInvestigacion.objects.create(ckan_id=99, delito="FRAUDE")
         assert c.latitud is None
         assert c.longitud is None
+
+    def test_new_fields_default_blank(self):
+        c = CarpetaInvestigacion.objects.create(ckan_id=100, delito="ROBO")
+        assert c.competencia == ""
+        assert c.alcaldia_catalogo == ""
+
+    def test_post_2019_date_stored(self):
+        c = CarpetaInvestigacion.objects.create(
+            ckan_id=200, delito="ROBO", fecha_hecho=datetime.date(2022, 6, 15)
+        )
+        assert c.fecha_hecho.year == 2022
 
 
 class CarpetaAPITest(APITestCase):

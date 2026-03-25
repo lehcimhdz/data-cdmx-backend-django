@@ -5,8 +5,12 @@ class CarpetaInvestigacion(models.Model):
     """
     Carpetas de investigación de la Fiscalía General de Justicia (FGJ) CDMX.
 
-    Fuente: resource_id=3f308147-b1fc-49a9-92b7-e74f3f79aa9c (~808 K registros)
-    Cobertura: enero 2016 – junio 2019.
+    Fuente: resource_id=48fcb848-220c-4af0-839b-4fd8ac812c0f (acumulado 2016–2024)
+    Campos API: anio_hecho, mes_hecho, fecha_hecho, hora_hecho, anio_inicio,
+                mes_inicio, fecha_inicio, hora_inicio, delito, categoria_delito,
+                competencia, fiscalia, agencia, unidad_investigacion,
+                colonia_hecho, colonia_catalogo, alcaldia_hecho, alcaldia_catalogo,
+                municipio_hecho, latitud, longitud
     """
 
     ckan_id = models.IntegerField(unique=True)
@@ -26,12 +30,14 @@ class CarpetaInvestigacion(models.Model):
     # Clasificación del delito
     delito = models.CharField(max_length=255)
     categoria_delito = models.CharField(max_length=100, blank=True)
+    competencia = models.CharField(max_length=100, blank=True, help_text="Nuevo campo 2020+")
     fiscalia = models.CharField(max_length=255, blank=True)
     agencia = models.CharField(max_length=100, blank=True)
     unidad_investigacion = models.CharField(max_length=100, blank=True)
 
     # Ubicación
     alcaldia_hechos = models.CharField(max_length=100, blank=True)
+    alcaldia_catalogo = models.CharField(max_length=100, blank=True, help_text="Nuevo campo 2020+")
     municipio_hechos = models.CharField(max_length=100, blank=True)
     colonia_datos = models.CharField(max_length=255, blank=True)
     fgj_colonia_registro = models.CharField(max_length=255, blank=True)
