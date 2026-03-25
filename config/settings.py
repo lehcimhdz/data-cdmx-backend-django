@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     # Terceros
     "rest_framework",
     "drf_spectacular",
+    "django_filters",
     "django_celery_results",
     "django_celery_beat",
     # Propios
@@ -82,6 +83,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
     "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],

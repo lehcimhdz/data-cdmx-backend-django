@@ -1,3 +1,4 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
 
@@ -11,67 +12,39 @@ from .serializers import (
 
 
 class AfluenciaMetroViewSet(viewsets.ReadOnlyModelViewSet):
-    """Afluencia Metro CDMX. Filtros: ?linea=Linea+1, ?estacion=Zaragoza, ?source=simple"""
+    """Afluencia Metro CDMX. Filtros: ?linea=Linea+1&anio=2023&source=simple"""
     queryset = AfluenciaMetro.objects.all()
     serializer_class = AfluenciaMetroSerializer
-    filter_backends = [SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["linea", "estacion", "source", "anio", "mes"]
     search_fields = ["linea", "estacion"]
     ordering_fields = ["fecha", "linea", "estacion", "afluencia"]
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        for field in ("linea", "estacion", "source", "anio"):
-            val = self.request.query_params.get(field)
-            if val:
-                qs = qs.filter(**{field: val})
-        return qs
-
 
 class AfluenciaMetrobusViewSet(viewsets.ReadOnlyModelViewSet):
-    """Afluencia Metrobús CDMX. Filtros: ?linea=Línea+1, ?source=simple"""
+    """Afluencia Metrobús CDMX. Filtros: ?linea=Línea+1&source=simple&anio=2022"""
     queryset = AfluenciaMetrobus.objects.all()
     serializer_class = AfluenciaMetrobusSerializer
-    filter_backends = [SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["linea", "source", "anio", "mes"]
     search_fields = ["linea"]
     ordering_fields = ["fecha", "linea", "afluencia"]
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        for field in ("linea", "source", "anio"):
-            val = self.request.query_params.get(field)
-            if val:
-                qs = qs.filter(**{field: val})
-        return qs
-
 
 class AfluenciaSTEViewSet(viewsets.ReadOnlyModelViewSet):
-    """Afluencia STE (Tren Ligero, Cablebus, Trolebús). Filtros: ?sistema=cablebus"""
+    """Afluencia STE (Tren Ligero, Cablebus, Trolebús). Filtros: ?sistema=cablebus&anio=2023"""
     queryset = AfluenciaSTE.objects.all()
     serializer_class = AfluenciaSTESerializer
-    filter_backends = [OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ["sistema", "linea", "anio", "mes"]
     ordering_fields = ["fecha", "sistema", "afluencia"]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        for field in ("sistema", "linea", "anio"):
-            val = self.request.query_params.get(field)
-            if val:
-                qs = qs.filter(**{field: val})
-        return qs
 
 
 class AfluenciaRTPViewSet(viewsets.ReadOnlyModelViewSet):
-    """Afluencia RTP. Filtros: ?servicio=..."""
+    """Afluencia RTP. Filtros: ?servicio=Ordinario&anio=2023"""
     queryset = AfluenciaRTP.objects.all()
     serializer_class = AfluenciaRTPSerializer
-    filter_backends = [SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["servicio", "anio", "mes"]
     search_fields = ["servicio"]
     ordering_fields = ["fecha", "servicio", "afluencia"]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        for field in ("servicio", "anio"):
-            val = self.request.query_params.get(field)
-            if val:
-                qs = qs.filter(**{field: val})
-        return qs
