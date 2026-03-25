@@ -18,7 +18,10 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from config.views import health
+
 urlpatterns = [
+    path("health/", health, name="health"),
     path("admin/", admin.site.urls),
     path("api/v1/", include("colonias.urls")),
     path("api/v1/transporte/", include("transporte.urls")),
