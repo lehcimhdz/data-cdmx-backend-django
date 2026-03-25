@@ -2,6 +2,7 @@
 Django settings for data-cdmx-backend-django.
 """
 
+import logging
 import os
 from pathlib import Path
 
@@ -161,6 +162,27 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=3, minute=0),
     },
 }
+
+# ---------------------------------------------------------------------------
+# Sentry
+# ---------------------------------------------------------------------------
+if SENTRY_DSN := os.getenv("SENTRY_DSN"):
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+        ],
+        traces_sample_rate=0.1,
+        environment=os.getenv("DJANGO_ENV", "production"),
+        send_default_pii=False,
+    )
 
 # ---------------------------------------------------------------------------
 # Logging
