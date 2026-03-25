@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "transporte",
     "seguridad",
     "riesgos",
+    "ecobici",
 ]
 
 MIDDLEWARE = [
