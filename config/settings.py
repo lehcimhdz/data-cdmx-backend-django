@@ -22,6 +22,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Terceros
     "rest_framework",
+    "django_celery_results",
+    "django_celery_beat",
     # Propios
     "colonias",
     "transporte",
@@ -94,6 +96,54 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---------------------------------------------------------------------------
+# Redis — cache y broker de Celery
+# ---------------------------------------------------------------------------
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Celery
+# ---------------------------------------------------------------------------
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = "django-db"          # guarda resultados en PostgreSQL
+CELERY_RESULT_EXTENDED = True                # metadatos completos en la BD
+CELERY_CACHE_BACKEND = "default"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+
+# ---------------------------------------------------------------------------
+# Celery Beat — tareas periódicas
+# ---------------------------------------------------------------------------
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    # Resumen de afluencia Metro: diario a las 02:00 hora CDMX
+    "resumen-afluencia-metro": {
+        "task": "transporte.tasks.calcular_resumen_metro",
+        "schedule": crontab(hour=2, minute=0),
+    },
+    # Resumen de afluencia STE (Cablebus, Trolebús, Tren Ligero)
+    "resumen-afluencia-ste": {
+        "task": "transporte.tasks.calcular_resumen_ste",
+        "schedule": crontab(hour=2, minute=30),
+    },
+    # Estadísticas de delitos por alcaldía: diario a las 03:00
+    "estadisticas-delitos": {
+        "task": "seguridad.tasks.calcular_estadisticas_delitos",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

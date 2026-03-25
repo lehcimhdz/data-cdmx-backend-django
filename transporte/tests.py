@@ -4,6 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from .models import AfluenciaMetro, AfluenciaMetrobus, AfluenciaSTE, AfluenciaRTP
+from .tasks import _calcular_resumen_metro, _calcular_resumen_ste
 
 TODAY = datetime.date(2024, 1, 15)
 
@@ -112,3 +113,58 @@ class AfluenciaSTEAPITest(APITestCase):
         url = reverse("ste-list") + "?sistema=tren_ligero"
         resp = self.client.get(url)
         assert resp.data["results"][0]["sistema_display"] == "Tren Ligero"
+
+
+# ---------------------------------------------------------------------------
+# Tests de tasks (lógica pura, sin broker)
+# ---------------------------------------------------------------------------
+
+class ResumenMetroTaskTest(TestCase):
+    def setUp(self):
+        _metro(ckan_id=1, linea="Linea 1", estacion="Zaragoza", source=AfluenciaMetro.SIMPLE)
+        _metro(ckan_id=2, linea="Linea 2", estacion="Portales", source=AfluenciaMetro.SIMPLE)
+        # desglosada no debe incluirse en el resumen
+        _metro(ckan_id=3, linea="Linea 1", estacion="Zaragoza", source=AfluenciaMetro.DESGLOSADA)
+
+    def test_excluye_desglosada(self):
+        resultado = _calcular_resumen_metro()
+        # Solo las 2 filas SIMPLE
+        assert len(resultado) == 2
+
+    def test_agrupa_por_linea_anio_mes(self):
+        _metro(ckan_id=4, linea="Linea 1", estacion="Indios Verdes", source=AfluenciaMetro.SIMPLE)
+        resultado = _calcular_resumen_metro()
+        linea1 = next(r for r in resultado if r["linea"] == "Linea 1")
+        # Linea 1 tiene 2 registros → suma de afluencias
+        assert linea1["total_afluencia"] == 40000
+
+    def test_retorna_lista_de_dicts(self):
+        resultado = _calcular_resumen_metro()
+        assert isinstance(resultado, list)
+        assert "linea" in resultado[0]
+        assert "total_afluencia" in resultado[0]
+
+    def test_vacio_si_no_hay_datos(self):
+        AfluenciaMetro.objects.all().delete()
+        assert _calcular_resumen_metro() == []
+
+
+class ResumenSTETaskTest(TestCase):
+    def setUp(self):
+        _ste(ckan_id=1, sistema=AfluenciaSTE.CABLEBUS)
+        _ste(ckan_id=2, sistema=AfluenciaSTE.TROLEBUS)
+        _ste(ckan_id=3, sistema=AfluenciaSTE.CABLEBUS)  # mismo sistema, distinto id
+
+    def test_agrupa_por_sistema(self):
+        resultado = _calcular_resumen_ste()
+        sistemas = {r["sistema"] for r in resultado}
+        assert sistemas == {"cablebus", "trolebus"}
+
+    def test_suma_afluencia_por_sistema(self):
+        resultado = _calcular_resumen_ste()
+        cablebus = next(r for r in resultado if r["sistema"] == "cablebus")
+        assert cablebus["total_afluencia"] == 2000  # 2 × 1000
+
+    def test_vacio_si_no_hay_datos(self):
+        AfluenciaSTE.objects.all().delete()
+        assert _calcular_resumen_ste() == []
