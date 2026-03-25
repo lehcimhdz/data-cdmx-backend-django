@@ -1,0 +1,22 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings_test"
+addopts = "--tb=short"
+
+[tool.coverage.run]
+source = ["colonias", "transporte", "seguridad", "riesgos"]
+omit = ["*/migrations/*", "*/tests.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
